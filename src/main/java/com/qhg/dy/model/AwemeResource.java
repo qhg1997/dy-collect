@@ -4,46 +4,53 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 
-import javax.persistence.Transient;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Consumer;
 
 @Data
-public class Aweme {
+public class AwemeResource {
     private Long id;
-    private String awemeId;
+    private Integer type;// 0 视频 1 图片
     private String secUid;
-    private String desc;
-    private String title;
-    @Transient
-    private String info;
-    private Date createTime;
-    private Integer awemeType;
-    private String authorName;
+    private String awemeId;
+    private String safeFileName;
+    private String uri;
+    private String localStorageAddress;
+    private Integer downed;//0 未下载 1 已下载
 
-    public Aweme() {
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName == null ? "TODO" : authorName;
     }
 
-    public Aweme(JSONObject object) {
+    private String authorName;//作者名
+
+    private String desc;
+    private String title;
+    private String info;
+    private Date createTime;
+
+    public AwemeResource() {
+    }
+
+    public AwemeResource(JSONObject object) {
         this.info = (object.toJSONString());
         this.awemeId = (object.getString("aweme_id"));
         this.desc = (object.getString("desc"));
         this.title = (object.getString("preview_title"));
         this.createTime = (new Date(object.getLongValue("create_time") * 1000));
-        this.awemeType = object.getInteger("aweme_type");
     }
 
-    public static List<Aweme> list(JSONArray list) {
+    public static List<AwemeResource> list(JSONArray list) {
         return list(list, null);
     }
 
-    public static List<Aweme> list(JSONArray list, Consumer<Aweme> consumer) {
-        List<Aweme> awemes = new ArrayList<>(list.size());
+    public static List<AwemeResource> list(JSONArray list, Consumer<AwemeResource> consumer) {
+        List<AwemeResource> awemes = new ArrayList<>(list.size());
         for (int i = 0; i < list.size(); i++) {
             JSONObject object = list.getJSONObject(i);
-            Aweme aweme = new Aweme(object);
+            AwemeResource aweme = new AwemeResource(object);
             if (consumer != null) {
                 consumer.accept(aweme);
             }
@@ -52,7 +59,4 @@ public class Aweme {
         return awemes;
     }
 
-    public String getFullId() {
-        return "aweme_" + this.id;
-    }
 }

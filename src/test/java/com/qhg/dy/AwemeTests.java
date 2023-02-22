@@ -1,13 +1,11 @@
 package com.qhg.dy;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qhg.dy.mapper.AwemeMapper;
-import com.qhg.dy.mapper.JPAMapper;
-import com.qhg.dy.mapper.SubUserMapper;
-import com.qhg.dy.mapper.SubjectMapper;
+import com.qhg.dy.mapper.*;
 import com.qhg.dy.model.Aweme;
 import com.qhg.dy.model.SubUser;
 import com.qhg.dy.model.Subject;
+import com.qhg.dy.model.WeightData;
 import com.qhg.dy.utils.AwemeAction;
 import com.qhg.dy.utils.DouYinAction;
 import org.junit.jupiter.api.Test;
@@ -26,6 +24,8 @@ class AwemeTests {
     SubUserMapper subUserMapper;
     @Resource
     JPAMapper jpaMapper;
+    @Resource
+    WeightDataMapper weightDataMapper;
 
 //    @Test
 //    void awemeType() throws InterruptedException {
@@ -65,7 +65,9 @@ class AwemeTests {
                             //save;
                             int i = 0;
                             for (Aweme aweme : list) {
+                                aweme.setAuthorName(user.getNickname());
                                 if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
+                                    weightDataMapper.insert(new WeightData(aweme.getFullId(), aweme.getInfo()));
                                     i += awemeMapper.insert(aweme);
                                 }
                             }
@@ -77,28 +79,27 @@ class AwemeTests {
 
     @Test
     void collectAwemeList2() throws InterruptedException {
-        List<SubUser> all = subUserMapper.findAll();
-        Collections.reverse(all);
+        List<SubUser> all = subUserMapper.find(" status = -1");
         for (SubUser user : all) {
-            if (user.getRyAwemeStatus() >= 0 && user.getRyAwemeStatus() != 2) {
-                List<Aweme> awemeList = new AwemeAction(user.getSecUid())
-                        .setBeforeAction(() -> System.out.println("准备开始 : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
-                        .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
-                        .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
-                        .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
-                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
-                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
-                        .getAllAwemes((list) -> {
-                            //save;
-                            int i = 0;
-                            for (Aweme aweme : list) {
-                                if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
-                                    i += awemeMapper.insert(aweme);
-                                }
+            List<Aweme> awemeList = new AwemeAction(user.getSecUid())
+                    .setBeforeAction(() -> System.out.println("准备开始 : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
+                    .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                    .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                    .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                            ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                            ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
+                    .getAllAwemes((list) -> {
+                        //save;
+                        int i = 0;
+                        for (Aweme aweme : list) {
+                            aweme.setAuthorName(user.getNickname());
+                            if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
+                                weightDataMapper.insert(new WeightData(aweme.getFullId(), aweme.getInfo()));
+                                i += awemeMapper.insert(aweme);
                             }
-                            return i;
-                        });
-            }
+                        }
+                        return i;
+                    });
         }
     }
 

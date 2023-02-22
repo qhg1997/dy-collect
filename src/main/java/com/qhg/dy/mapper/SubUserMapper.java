@@ -19,6 +19,9 @@ public interface SubUserMapper {
 
     int insert(SubUser subUser);
 
-    @Select("select * from sub_user where ry_aweme_status >= 0 and ry_aweme_status != 2")
+    @Select("select * from sub_user")
     List<SubUser> findAll();
+
+    @Select("select * from sub_user where ${condition}")
+    List<SubUser> find(String condition);
 }

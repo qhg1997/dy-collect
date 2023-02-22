@@ -32,8 +32,8 @@
         <selectKey keyProperty="id" order="AFTER" resultType="Long">
             SELECT LAST_INSERT_ID()
         </selectKey>
-        insert sub_user(uid, short_id, nickname, signature, sec_uid, info, subject_id, sub_type)
-        values (#{uid}, #{shortId}, #{nickname}, #{signature}, #{secUid}, #{info}, #{subjectId}, #{subType})
+        insert sub_user(uid, short_id, nickname, signature, sec_uid, subject_id, sub_type)
+        values (#{uid}, #{shortId}, #{nickname}, #{signature}, #{secUid}, #{subjectId}, #{subType})
     </insert>
 
 </mapper>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--namespace为UserDao接口的全类名-->
+<mapper namespace="com.qhg.dy.mapper.AwemeResourceMapper">
+
+    <select id="selectOne" parameterType="String" resultType="com.qhg.dy.model.AwemeResource">
+        select *
+        from aweme_resource
+        where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.qhg.dy.model.AwemeResource">
+        insert aweme_resource(type, sec_uid, aweme_id, safe_file_name, uri, local_storage_address, author_name, `desc`,
+                              title, info, create_time)
+        values (#{type}, #{secUid}, #{awemeId}, #{safeFileName}, #{uri}, #{localStorageAddress}, #{authorName}, #{desc},
+                #{title}, #{info}, #{createTime})
+    </insert>
+
+    <delete id="delete" parameterType="String">
+        DELETE
+        from aweme_resource
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

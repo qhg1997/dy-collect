@@ -28,8 +28,9 @@
         <selectKey keyProperty="id" order="AFTER" resultType="Long">
             SELECT LAST_INSERT_ID()
         </selectKey>
-        insert aweme(aweme_id, sec_uid, `desc`, title, info, create_time,aweme_type)
-        values (#{awemeId}, #{secUid}, #{desc}, #{title}, #{info}, #{createTime},#{awemeType})
+
+        insert aweme(aweme_id, sec_uid, `desc`, `title`, create_time, `aweme_type`,author_name)
+        values (#{awemeId}, #{secUid}, #{desc}, #{title}, #{createTime},#{awemeType},#{authorName})
     </insert>
 
 </mapper>

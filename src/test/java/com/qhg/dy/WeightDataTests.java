@@ -1,19 +1,31 @@
 package com.qhg.dy;
 
+import com.qhg.dy.mapper.AwemeMapper;
+import com.qhg.dy.mapper.JPAMapper;
 import com.qhg.dy.mapper.SubUserMapper;
-import com.qhg.dy.model.Model1;
+import com.qhg.dy.mapper.WeightDataMapper;
+import com.qhg.dy.model.Aweme;
 import com.qhg.dy.model.SubUser;
+import com.qhg.dy.model.WeightData;
 import com.qhg.dy.utils.IO;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.util.List;
 
 @SpringBootTest
-public class DemoTests {
+public class WeightDataTests {
     @Resource
     SubUserMapper subUserMapper;
+    @Resource
+    AwemeMapper awemeMapper;
+    @Resource
+    JPAMapper jpaMapper;
+    @Resource
+    WeightDataMapper weightDataMapper;
 
     @Test
     void t1() {
@@ -33,14 +45,5 @@ public class DemoTests {
 
     public static void main(String[] args) {
 
-    }
-
-    private static String replaceT(String text) {
-        String reSub = "[^\u4e00-\u9fa5^a-zA-Z0-9#]";
-        if (text == null)
-            return System.currentTimeMillis() + "";
-        if (text.length() > 70)
-            text = text.substring(0, 70);
-        return text.replaceAll(reSub, "_");
     }
 }

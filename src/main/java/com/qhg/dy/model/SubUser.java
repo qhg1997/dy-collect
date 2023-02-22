@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 
+import javax.persistence.Transient;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -17,6 +18,7 @@ public class SubUser {
     private String nickname;
     private String signature;
     private String secUid;
+    @Transient
     private String info;
     private Integer subjectId;//主体id
     private Integer subType;//1黑名单 2关注
@@ -38,5 +40,9 @@ public class SubUser {
             subUsers.add(subUser);
         }
         return subUsers;
+    }
+
+    public String getFullId() {
+        return "sub_user_" + this.getId();
     }
 }

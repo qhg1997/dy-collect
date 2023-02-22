@@ -17,6 +17,9 @@ public interface AwemeMapper {
 
     int countByAwemeId(String awemeId);
 
-    @Select("select * from aweme where aweme_type = -1 limit 200")
+    @Select("select * from aweme")
     List<Aweme> findAll();
+
+    @Select("select * from aweme where ${condition}")
+    List<Aweme> find(String condition);
 }

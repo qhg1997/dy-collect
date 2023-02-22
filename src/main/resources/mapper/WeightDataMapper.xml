@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--namespace为UserDao接口的全类名-->
+<mapper namespace="com.qhg.dy.mapper.WeightDataMapper">
+
+    <select id="selectOne" parameterType="String" resultType="com.qhg.dy.model.WeightData">
+        select *
+        from weight_data
+        where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.qhg.dy.model.WeightData">
+        insert weight_data(id, value)
+        values (#{id}, #{value})
+    </insert>
+
+    <insert id="insertId" parameterType="com.qhg.dy.model.WeightData">
+        insert weight_data(id, value)
+        values (#{id}, #{value})
+    </insert>
+
+    <delete id="delete" parameterType="String">
+        DELETE
+        from weight_data
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
