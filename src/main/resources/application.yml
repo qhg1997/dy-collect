@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    username: root
+    password: root
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/dy?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      # 链接池初始化大小
+      initial-size: 8
+      # 最大活跃数
+      max-active: 16
+      # 最小空闲数
+      min-idle: 1
+      # 最大等待时间
+      max-wait: 60000
+mybatis:
+  mapper-locations: classpath:mapper/*Mapper.xml
+  type-aliases-package: com.qhg.dy.model
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+

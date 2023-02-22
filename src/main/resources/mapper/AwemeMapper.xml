@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.qhg.dy.mapper.AwemeMapper">
+
+    <select id="findById" parameterType="Long" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from aweme
+        where id = #{id}
+    </select>
+    <select id="findByAwemeId" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from aweme
+        where aweme_id = #{awemeId}
+    </select>
+    <select id="findBySecUid" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from aweme
+        where sec_uid = #{secUid}
+    </select>
+    <select id="countByAwemeId" parameterType="String" resultType="int">
+        select count(*)
+        from aweme
+        where aweme_id = #{awemeId}
+    </select>
+
+    <insert id="insert" parameterType="com.qhg.dy.model.Aweme">
+        <selectKey keyProperty="id" order="AFTER" resultType="Long">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert aweme(aweme_id, sec_uid, `desc`, title, info, create_time,aweme_type)
+        values (#{awemeId}, #{secUid}, #{desc}, #{title}, #{info}, #{createTime},#{awemeType})
+    </insert>
+
+</mapper>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--namespace为UserDao接口的全类名-->
+<mapper namespace="com.qhg.dy.mapper.SubUserMapper">
+    <select id="countByUid" parameterType="String" resultType="Long">
+        select count(*)
+        from sub_user
+        where uid = #{uid}
+    </select>
+    <select id="findById" parameterType="Long" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from sub_user
+        where id = #{id}
+    </select>
+    <select id="findByUid" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from sub_user
+        where uid = #{uid}
+    </select>
+    <select id="findBySecUid" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from sub_user
+        where sec_uid = #{secUid}
+    </select>
+    <select id="findByNickname" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+        select *
+        from sub_user
+        where nickname like concat('%', #{name}, '%')
+    </select>
+    <insert id="insert" parameterType="com.qhg.dy.model.SubUser">
+        <selectKey keyProperty="id" order="AFTER" resultType="Long">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert sub_user(uid, short_id, nickname, signature, sec_uid, info, subject_id, sub_type)
+        values (#{uid}, #{shortId}, #{nickname}, #{signature}, #{secUid}, #{info}, #{subjectId}, #{subType})
+    </insert>
+
+</mapper>
