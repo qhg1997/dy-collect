@@ -34,4 +34,13 @@ public class DemoTests {
     public static void main(String[] args) {
 
     }
+
+    private static String replaceT(String text) {
+        String reSub = "[^\u4e00-\u9fa5^a-zA-Z0-9#]";
+        if (text == null)
+            return System.currentTimeMillis() + "";
+        if (text.length() > 70)
+            text = text.substring(0, 70);
+        return text.replaceAll(reSub, "_");
+    }
 }
