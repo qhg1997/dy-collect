@@ -3,17 +3,17 @@
 
 <mapper namespace="com.qhg.dy.mapper.AwemeMapper">
 
-    <select id="findById" parameterType="Long" resultType="com.qhg.dy.model.SubUser">
+    <select id="findById" parameterType="Long" resultType="com.qhg.dy.model.Aweme">
         select *
         from aweme
         where id = #{id}
     </select>
-    <select id="findByAwemeId" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+    <select id="findByAwemeId" parameterType="String" resultType="com.qhg.dy.model.Aweme">
         select *
         from aweme
         where aweme_id = #{awemeId}
     </select>
-    <select id="findBySecUid" parameterType="String" resultType="com.qhg.dy.model.SubUser">
+    <select id="findBySecUid" parameterType="String" resultType="com.qhg.dy.model.Aweme">
         select *
         from aweme
         where sec_uid = #{secUid}

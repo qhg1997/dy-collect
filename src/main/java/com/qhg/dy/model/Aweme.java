@@ -55,4 +55,6 @@ public class Aweme {
     public String getFullId() {
         return "aweme_" + this.id;
     }
+
+    List<AwemeResource> resources;
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface AwemeMapper {
 
-    Aweme findById(String id);
+    Aweme findById(Long id);
 
     List<Aweme> findByAwemeId(String awemeId);
 
