@@ -1,31 +1,25 @@
 package com.qhg.dy.utils;
 
-import cn.hutool.script.ScriptUtil;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.ejlchina.okhttps.*;
 import com.ejlchina.okhttps.fastjson.FastjsonMsgConvertor;
 import com.qhg.dy.model.Aweme;
 import com.qhg.dy.model.AwemeResource;
 import lombok.Data;
 import okhttp3.*;
-import org.jetbrains.annotations.NotNull;
 
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Data
 public class Downloader {
 
     public static File baseFolder = new File("D:\\dyDowned");
+    Integer mode = 1;
+
+    public ArrayBlockingQueue<AwemeResource> arrayBlockingQueue = new ArrayBlockingQueue<>(50000);
 
     static {
         if (!baseFolder.exists()) {
@@ -36,78 +30,116 @@ public class Downloader {
 
 
     private final List<AwemeResource> resource;
-    private final Aweme aweme;
-    private static final HTTP http = HTTP.builder()
+    private final HTTP http = HTTP.builder()
             .config(b ->
                     b.addInterceptor(new IInterceptor())
                             .connectTimeout(1, TimeUnit.MINUTES)
                             .readTimeout(1, TimeUnit.MINUTES)
                             .writeTimeout(1, TimeUnit.MINUTES)
+                            .connectionPool(new ConnectionPool(50, 5, TimeUnit.MINUTES))
             )
             .addMsgConvertor(new FastjsonMsgConvertor())
             .build();
-    private static final HTTP http0 = HTTP.builder()
+
+    private final HTTP http0 = HTTP.builder()
             .config(b ->
                     b.addInterceptor(new IInterceptor())
                             .connectTimeout(1, TimeUnit.MINUTES)
                             .readTimeout(1, TimeUnit.MINUTES)
                             .writeTimeout(1, TimeUnit.MINUTES)
-                            .followRedirects(false))
+                            .connectionPool(new ConnectionPool(50, 5, TimeUnit.MINUTES))
+                            .followRedirects(false)
+            )
             .addMsgConvertor(new FastjsonMsgConvertor())
             .build();
 
     private Consumer<AwemeResource> finishAction;
-    private Consumer<Aweme> completeAction;
+    private Consumer<AwemeResource> failAction;
 
-    public Downloader(Aweme aweme) {
-        this.aweme = aweme;
-        this.resource = aweme.getResources();
+    public Downloader(List<AwemeResource> resources) {
+        this.resource = resources;
     }
 
-    public boolean download() {
-        for (AwemeResource awemeResource : resource) {
+    public void download() throws InterruptedException {
+        resource.parallelStream().forEach(awemeResource -> {
             File file;
             if (awemeResource.getType() == 1) {
-                file = new File(baseFolder, awemeResource.getAuthorName() + "\\image\\" + awemeResource.getTitle() + "\\" + awemeResource.getSafeFileName());
+                if (mode == 0)
+                    file = new File(baseFolder, awemeResource.getAuthorName() + "\\image\\" + awemeResource.getTitle() + "\\" + awemeResource.getSafeFileName());
+                else
+                    file = new File(baseFolder, "image\\" + awemeResource.getAuthorName() + "\\" + awemeResource.getTitle() + "\\" + awemeResource.getSafeFileName());
                 if (file.exists()) {
-                    continue;
+                    System.out.println(file.getAbsolutePath() + " : 文件存在");
+                    Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
+                    return;
                 }
                 if (!file.getParentFile().exists()) {
                     boolean mkdirs = file.getParentFile().mkdirs();
                     System.out.println(file.getParent() + " 文件夹创建: " + (mkdirs ? "成功" : "失败"));
                 }
 
-                http.sync(awemeResource.getUri())
+                HttpResult.Body body = http.sync(awemeResource.getUri())
                         .get()                           // 使用 GET 方法（其它方法也可以，看服务器支持）
-                        .getBody()                       // 得到报文体
-                        .toFile(file)  // 下载到指定的文件路径
-                        .start();                        // 启动下载
+                        .getBody(); // 得到报文体
+                body.toFile(file)// 下载到指定的文件路径
+                        .setOnComplete(status -> body.close())
+                        .setOnSuccess(f -> {
+                            Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
+                            System.out.println(f.getAbsolutePath() + " 文件下载: " + (f.exists() ? "成功" : "失败"));
+                        }).setOnFailure(failure -> {
+                    failure.getException().printStackTrace();
+                    System.err.println(failure.getFile().getAbsolutePath() + " 文件下载: 失败");
+                })
+                        .start();// 启动下载
 
             } else {
-                file = new File(baseFolder, awemeResource.getAuthorName() + "\\video\\" + awemeResource.getSafeFileName());
+                if (mode == 0)
+                    file = new File(baseFolder, awemeResource.getAuthorName() + "\\video\\" + awemeResource.getId() + "_" + awemeResource.getSafeFileName());
+                else
+                    file = new File(baseFolder, "video\\" + awemeResource.getAuthorName() + "\\" + awemeResource.getId() + "_" + awemeResource.getSafeFileName());
+
                 if (file.exists()) {
-                    continue;
+                    return;
                 }
                 if (!file.getParentFile().exists()) {
                     boolean mkdirs = file.getParentFile().mkdirs();
                     System.out.println(file.getParent() + " 文件夹创建: " + (mkdirs ? "成功" : "失败"));
                 }
 
-                String location = http0.async(awemeResource.getUri())
-                        .get().getResult()
-                        .getHeader("location");
-                http.sync(location)
-                        .get()                           // 使用 GET 方法（其它方法也可以，看服务器支持）
-                        .getBody()                       // 得到报文体
-                        .toFile(file)  // 下载到指定的文件路径
-                        .start();                        // 启动下载
-
+                HttpResult result = http0.async(awemeResource.getUri())
+                        .get().getResult();
+                String location = result.getHeader("location");
+                result.close();
+                if (location != null && !location.equals("")) {
+                    try {
+                        HttpResult.Body body = http.sync(location)
+                                .get()                           // 使用 GET 方法（其它方法也可以，看服务器支持）
+                                .getBody(); // 得到报文体
+                        Download.Ctrl ctrl = body.toFile(file)// 下载到指定的文件路径
+                                .setOnComplete(status -> {
+                                    body.close();
+                                })
+                                .setOnSuccess(f -> {
+                                    Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
+                                    System.out.println(Thread.currentThread().getName() + " : " + f.getAbsolutePath() + " 文件下载: " + (f.exists() ? "成功" : "失败"));
+                                })
+                                .setOnFailure(failure -> {
+                                    failure.getException().printStackTrace();
+                                    System.err.println(failure.getFile().getAbsolutePath() + " 文件下载: 失败");
+                                }).start();// 启动下载
+//                        while (true) {
+//                            if (ctrl.status().equals(Download.Status.DONE)) {
+//                                break;
+//                            }
+//                        }
+                    } catch (Exception e) {
+                        Optional.ofNullable(failAction).ifPresent(fun -> fun.accept(awemeResource));
+                    }
+                } else
+                    Optional.ofNullable(failAction).ifPresent(fun -> fun.accept(awemeResource));
             }
-            System.out.println(file.getAbsolutePath() + " 文件下载: " + (file.exists() ? "成功" : "失败"));
-            Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
-        }
-        Optional.ofNullable(completeAction).ifPresent(fun -> fun.accept(this.aweme));
-        return true;
+        });
     }
+
 
 }

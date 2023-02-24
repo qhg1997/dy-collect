@@ -33,8 +33,8 @@ class SubUserTests {
             if (count == 0) {
                 subUser.setSubType(1);
                 subUser.setSubjectId(subject.getId());
-                weightDataMapper.insert(new WeightData(subUser.getFullId(), subUser.getInfo()));
                 int insert = subUserMapper.insert(subUser);
+                weightDataMapper.insert(new WeightData(subUser.getFullId(), subUser.getInfo()));
                 System.out.println(subUser.getNickname() + " : 插入" + insert);
             } else {
                 System.err.println(subUser.getNickname() + " : 已存在");

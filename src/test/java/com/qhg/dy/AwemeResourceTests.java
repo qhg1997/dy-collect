@@ -49,7 +49,7 @@ class AwemeResourceTests {
                                 awemeResource.setAwemeId(aweme.getAwemeId());
                                 awemeResource.setSafeFileName(aweme.getAwemeId() + "_" + i + ".jpg");
                                 awemeResource.setDowned(0);
-                                awemeResource.setAuthorName(aweme.getAuthorName());
+                                awemeResource.setAuthorName(replaceT(aweme.getAuthorName()));
                                 awemeResource.setDesc(replaceR(aweme.getDesc(), 60));
                                 awemeResource.setTitle(replaceR(aweme.getTitle(), 60));
                                 awemeResource.setCreateTime(aweme.getCreateTime());
@@ -77,7 +77,7 @@ class AwemeResourceTests {
                             awemeResource.setAwemeId(aweme.getAwemeId());
                             awemeResource.setSafeFileName(replaceT(aweme.getTitle()) + "_" + ".mp4");
                             awemeResource.setDowned(0);
-                            awemeResource.setAuthorName(aweme.getAuthorName());
+                            awemeResource.setAuthorName(replaceT(aweme.getAuthorName()));
                             awemeResource.setDesc(replaceR(aweme.getDesc(), 60));
                             awemeResource.setTitle(replaceR(aweme.getTitle(), 60));
                             awemeResource.setCreateTime(aweme.getCreateTime());
