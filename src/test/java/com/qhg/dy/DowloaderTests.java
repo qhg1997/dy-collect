@@ -62,7 +62,7 @@ class DowloaderTests {
         List<AwemeResource> resources = resourceMapper.find("type = 1  and downed = 1");
         resources.forEach((awemeResource) -> {
             File file = new File(Downloader.baseFolder, "image\\" + awemeResource.getAuthorName() + "\\" + awemeResource.getTitle() + "\\" + awemeResource.getSafeFileName());
-            if (!file.exists()) {
+            if (!file.exists() || file.length() == 0) {
                 System.out.println(file.getAbsolutePath());
 //                jpaMapper.update("update aweme_resource set downed = 0 where id = " + awemeResource.getId());
             }
@@ -90,7 +90,7 @@ class DowloaderTests {
 
     @Test
     void test1() throws InterruptedException {
-        List<AwemeResource> resources = resourceMapper.find(" type = 0");
+        List<AwemeResource> resources = resourceMapper.find(" type = 0 and downed = 1");
         for (AwemeResource resource : resources) {
             File file = new File(Downloader.baseFolder, "video\\" + resource.getAuthorName() + "\\" + resource.getId() + "_" + resource.getSafeFileName());
             if (!file.exists() || file.length() == 0) {

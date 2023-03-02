@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 @Data
 public class Downloader {
 
-    public static File baseFolder = new File("D:\\dyDowned");
+    public static File baseFolder = new File("D:\\好用的软件\\HTTP Debugger Pro  注册机\\dyDowned");
     Integer mode = 1;
 
     public ArrayBlockingQueue<AwemeResource> arrayBlockingQueue = new ArrayBlockingQueue<>(50000);
