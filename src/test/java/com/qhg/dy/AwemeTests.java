@@ -49,7 +49,7 @@ class AwemeTests {
                 continue;
             List<Aweme> awemeList = new AwemeAction(user)
                     .setBeforeAction(() -> {
-                        System.out.println("准备开始 : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
+                        System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
                     })
                     .setonErrorAction((integer) -> {
                         jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId());
@@ -82,11 +82,11 @@ class AwemeTests {
         List<SubUser> all = subUserMapper.findAll();
         Collections.reverse(all);
         for (SubUser user : all) {
-            if (user.getRyAwemeStatus() == -1)
-                continue;
+//            if (user.getRyAwemeStatus() == -1)
+//                continue;
             List<Aweme> awemeList = new AwemeAction(user)
                     .setBeforeAction(() -> {
-                        System.out.println("准备开始 : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
+                        System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
                     })
                     .setonErrorAction((integer) -> {
                         jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId());
