@@ -4,6 +4,7 @@ import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.NumberUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.ejlchina.okhttps.OkHttps;
 import com.qhg.dy.mapper.*;
 import com.qhg.dy.model.Aweme;
 import com.qhg.dy.model.AwemeResource;
@@ -87,5 +88,32 @@ class DowloaderTests {
         }
     }
 
+    @Test
+    void test1() throws InterruptedException {
+        List<AwemeResource> resources = resourceMapper.find(" type = 0");
+        for (AwemeResource resource : resources) {
+            File file = new File(Downloader.baseFolder, "video\\" + resource.getAuthorName() + "\\" + resource.getId() + "_" + resource.getSafeFileName());
+            if (!file.exists() || file.length() == 0) {
+                FileUtils.deleteQuietly(file);
+                System.out.println(resource.getUri());
+                jpaMapper.update("update aweme_resource set downed = 0 where id = " + resource.getId());
+            }
+        }
+    }
+
+    @Test
+    void test5() throws InterruptedException {
+        List<AwemeResource> resources = resourceMapper.find(" type = 0 and downed = 0");
+        for (AwemeResource resource : resources) {
+            File file = new File(Downloader.baseFolder, "video\\" + resource.getAuthorName() + "\\" + resource.getId() + "_" + resource.getSafeFileName());
+            FileUtils.deleteQuietly(file);
+            if (OkHttps.async(resource.getUri()).get().getResult().getStatus() == 404) {
+                jpaMapper.update("update aweme_resource set downed = -1 where id = " + resource.getId());
+            } else {
+                System.out.println(resource.getUri());
+            }
+
+        }
+    }
 
 }

@@ -33,10 +33,10 @@ public class Downloader {
     private final HTTP http = HTTP.builder()
             .config(b ->
                     b.addInterceptor(new IInterceptor())
-                            .connectTimeout(1, TimeUnit.MINUTES)
-                            .readTimeout(1, TimeUnit.MINUTES)
-                            .writeTimeout(1, TimeUnit.MINUTES)
-                            .connectionPool(new ConnectionPool(50, 5, TimeUnit.MINUTES))
+                            .connectTimeout(10, TimeUnit.MINUTES)
+                            .readTimeout(10, TimeUnit.MINUTES)
+                            .writeTimeout(10, TimeUnit.MINUTES)
+                            .connectionPool(new ConnectionPool(100, 5, TimeUnit.MINUTES))
             )
             .addMsgConvertor(new FastjsonMsgConvertor())
             .build();
@@ -44,10 +44,10 @@ public class Downloader {
     private final HTTP http0 = HTTP.builder()
             .config(b ->
                     b.addInterceptor(new IInterceptor())
-                            .connectTimeout(1, TimeUnit.MINUTES)
-                            .readTimeout(1, TimeUnit.MINUTES)
-                            .writeTimeout(1, TimeUnit.MINUTES)
-                            .connectionPool(new ConnectionPool(50, 5, TimeUnit.MINUTES))
+                            .connectTimeout(10, TimeUnit.MINUTES)
+                            .readTimeout(10, TimeUnit.MINUTES)
+                            .writeTimeout(10, TimeUnit.MINUTES)
+                            .connectionPool(new ConnectionPool(100, 5, TimeUnit.MINUTES))
                             .followRedirects(false)
             )
             .addMsgConvertor(new FastjsonMsgConvertor())
@@ -61,7 +61,7 @@ public class Downloader {
     }
 
     public void download() throws InterruptedException {
-        resource.parallelStream().forEach(awemeResource -> {
+        resource.forEach(awemeResource -> {
             File file;
             if (awemeResource.getType() == 1) {
                 if (mode == 0)
@@ -99,6 +99,8 @@ public class Downloader {
                     file = new File(baseFolder, "video\\" + awemeResource.getAuthorName() + "\\" + awemeResource.getId() + "_" + awemeResource.getSafeFileName());
 
                 if (file.exists()) {
+                    Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
+                    System.err.println("已存在： " + file.getAbsolutePath());
                     return;
                 }
                 if (!file.getParentFile().exists()) {
@@ -106,37 +108,31 @@ public class Downloader {
                     System.out.println(file.getParent() + " 文件夹创建: " + (mkdirs ? "成功" : "失败"));
                 }
 
-                HttpResult result = http0.async(awemeResource.getUri())
-                        .get().getResult();
-                String location = result.getHeader("location");
-                result.close();
-                if (location != null && !location.equals("")) {
-                    try {
-                        HttpResult.Body body = http.sync(location)
-                                .get()                           // 使用 GET 方法（其它方法也可以，看服务器支持）
-                                .getBody(); // 得到报文体
-                        Download.Ctrl ctrl = body.toFile(file)// 下载到指定的文件路径
-                                .setOnComplete(status -> {
-                                    body.close();
-                                })
-                                .setOnSuccess(f -> {
-                                    Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
-                                    System.out.println(Thread.currentThread().getName() + " : " + f.getAbsolutePath() + " 文件下载: " + (f.exists() ? "成功" : "失败"));
-                                })
-                                .setOnFailure(failure -> {
-                                    failure.getException().printStackTrace();
-                                    System.err.println(failure.getFile().getAbsolutePath() + " 文件下载: 失败");
-                                }).start();// 启动下载
+                try {
+                    System.err.println(awemeResource.getUri());
+                    HttpResult.Body body = http.sync(awemeResource.getUri())
+                            .get()                           // 使用 GET 方法（其它方法也可以，看服务器支持）
+                            .getBody(); // 得到报文体
+                    Download.Ctrl ctrl = body.toFile(file)// 下载到指定的文件路径
+                            .setOnComplete(status -> {
+                                body.close();
+                            })
+                            .setOnSuccess(f -> {
+                                Optional.ofNullable(finishAction).ifPresent(fun -> fun.accept(awemeResource));
+                                System.out.println(Thread.currentThread().getName() + " : " + f.getAbsolutePath() + " 文件下载: " + (f.exists() ? "成功" : "失败"));
+                            })
+                            .setOnFailure(failure -> {
+                                failure.getException().printStackTrace();
+                                System.err.println(failure.getFile().getAbsolutePath() + " 文件下载: 失败");
+                            }).start();// 启动下载
 //                        while (true) {
 //                            if (ctrl.status().equals(Download.Status.DONE)) {
 //                                break;
 //                            }
 //                        }
-                    } catch (Exception e) {
-                        Optional.ofNullable(failAction).ifPresent(fun -> fun.accept(awemeResource));
-                    }
-                } else
+                } catch (Exception e) {
                     Optional.ofNullable(failAction).ifPresent(fun -> fun.accept(awemeResource));
+                }
             }
         });
     }
