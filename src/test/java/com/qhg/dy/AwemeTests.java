@@ -1,13 +1,10 @@
 package com.qhg.dy;
 
-import com.alibaba.fastjson.JSONObject;
 import com.qhg.dy.mapper.*;
 import com.qhg.dy.model.Aweme;
 import com.qhg.dy.model.SubUser;
-import com.qhg.dy.model.Subject;
 import com.qhg.dy.model.WeightData;
 import com.qhg.dy.utils.AwemeAction;
-import com.qhg.dy.utils.DouYinAction;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -27,7 +24,7 @@ class AwemeTests {
     @Resource
     WeightDataMapper weightDataMapper;
 
-//    @Test
+    //    @Test
 //    void awemeType() throws InterruptedException {
 //        while (true) {
 //            List<Aweme> awemes = awemeMapper.findAll();
@@ -40,6 +37,95 @@ class AwemeTests {
 //            }
 //        }
 //    }
+    @Test
+    void fastCollectAwemeListForHasProblem() {
+        List<SubUser> all = subUserMapper.find(" ry_aweme_count > 0 and ry_aweme_status = -1");
+        all.parallelStream().forEach(user -> {
+            try {
+                List<Aweme> awemeList = new AwemeAction(user)
+                        .setBeforeAction(() -> System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
+                        .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                        .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                        .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
+                        .getAllAwemes((list) -> {
+                            //save;
+                            int i = 0;
+                            for (Aweme aweme : list) {
+                                aweme.setAuthorName(user.getNickname());
+                                if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
+                                    i += awemeMapper.insert(aweme);
+                                    weightDataMapper.insert(new WeightData(aweme.getFullId(), aweme.getInfo()));
+                                }
+                            }
+                            return i;
+                        });
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @Test
+    void fastCollectAwemeList() {
+        List<SubUser> all = subUserMapper.find(" ry_aweme_status = 2");
+        all.parallelStream().forEach(user -> {
+            try {
+                List<Aweme> awemeList = new AwemeAction(user)
+                        .setBeforeAction(() -> System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
+                        .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                        .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                        .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
+                        .getAllAwemes((list) -> {
+                            //save;
+                            int i = 0;
+                            for (Aweme aweme : list) {
+                                aweme.setAuthorName(user.getNickname());
+                                if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
+                                    i += awemeMapper.insert(aweme);
+                                    weightDataMapper.insert(new WeightData(aweme.getFullId(), aweme.getInfo()));
+                                }
+                            }
+                            return i;
+                        });
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @Test
+    void fastCollectNews() {
+        List<SubUser> all = subUserMapper.find(" ry_aweme_status is null");
+        all.parallelStream().forEach(user -> {
+            try {
+                List<Aweme> awemeList = new AwemeAction(user)
+                        .setBeforeAction(() -> System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
+                        .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                        .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                        .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
+                        .getAllAwemes((list) -> {
+                            //save;
+                            int i = 0;
+                            for (Aweme aweme : list) {
+                                aweme.setAuthorName(user.getNickname());
+                                if (awemeMapper.countByAwemeId(aweme.getAwemeId()) == 0) {
+                                    i += awemeMapper.insert(aweme);
+                                    weightDataMapper.insert(new WeightData(aweme.getFullId(), aweme.getInfo()));
+                                }
+                            }
+                            return i;
+                        });
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
 
     @Test
     void collectAwemeList() throws InterruptedException {
@@ -48,20 +134,12 @@ class AwemeTests {
             if (user.getRyAwemeStatus() == -1)
                 continue;
             List<Aweme> awemeList = new AwemeAction(user)
-                    .setBeforeAction(() -> {
-                        System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
-                    })
-                    .setonErrorAction((integer) -> {
-                        jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId());
-                    })
-                    .setBeginAction(() -> {
-                        jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId());
-                    })
-                    .setFinishAction(() -> {
-                        jpaMapper.update("update sub_user set ry_aweme_status = 2" +
-                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
-                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId());
-                    })
+                    .setBeforeAction(() -> System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid()))
+                    .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                    .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                    .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                            ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                            ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
                     .getAllAwemes((list) -> {
                         //save;
                         int i = 0;
@@ -88,17 +166,11 @@ class AwemeTests {
                     .setBeforeAction(() -> {
                         System.out.println("准备开始(" + user.getId() + ") : " + user.getNickname() + " 的解析  https://www.douyin.com/user/" + user.getSecUid());
                     })
-                    .setonErrorAction((integer) -> {
-                        jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId());
-                    })
-                    .setBeginAction(() -> {
-                        jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId());
-                    })
-                    .setFinishAction(() -> {
-                        jpaMapper.update("update sub_user set ry_aweme_status = 2" +
-                                ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
-                                ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId());
-                    })
+                    .setonErrorAction((integer) -> jpaMapper.update("update sub_user set reason = '拉黑或被封',ry_aweme_status = -1 where id = " + user.getId()))
+                    .setBeginAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 1 where id = " + user.getId()))
+                    .setFinishAction(() -> jpaMapper.update("update sub_user set ry_aweme_status = 2" +
+                            ",ry_aweme_time = (select max(create_time) from aweme where sec_uid = '" + user.getSecUid() + "')" +
+                            ",ry_aweme_count = (select count(*) from aweme where sec_uid = '" + user.getSecUid() + "' ) where id = " + user.getId()))
                     .getAllAwemes((list) -> {
                         //save;
                         int i = 0;

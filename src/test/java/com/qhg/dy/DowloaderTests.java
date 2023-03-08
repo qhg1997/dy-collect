@@ -71,6 +71,7 @@ class DowloaderTests {
 
 
     @Test
+        /*视频下载*/
     void test0() throws InterruptedException {
         while (true) {
             List<AwemeResource> resources = resourceMapper.find(" downed = 0 and type = 0 limit 10000");
@@ -89,6 +90,7 @@ class DowloaderTests {
     }
 
     @Test
+        /*视频下载校验*/
     void test1() throws InterruptedException {
         List<AwemeResource> resources = resourceMapper.find(" type = 0 and downed = 1");
         for (AwemeResource resource : resources) {
@@ -102,6 +104,7 @@ class DowloaderTests {
     }
 
     @Test
+        /*视频下载校验*/
     void test5() throws InterruptedException {
         List<AwemeResource> resources = resourceMapper.find(" type = 0 and downed = 0");
         for (AwemeResource resource : resources) {
