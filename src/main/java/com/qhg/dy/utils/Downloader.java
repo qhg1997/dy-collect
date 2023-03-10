@@ -61,7 +61,7 @@ public class Downloader {
     }
 
     public void download() throws InterruptedException {
-        resource.forEach(awemeResource -> {
+        resource.parallelStream().forEach(awemeResource -> {
             File file;
             if (awemeResource.getType() == 1) {
                 if (mode == 0)

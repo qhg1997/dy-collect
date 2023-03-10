@@ -99,7 +99,7 @@ class AwemeTests {
 
     @Test
     void fastCollectNews() {
-        List<SubUser> all = subUserMapper.find(" ry_aweme_status is null");
+        List<SubUser> all = subUserMapper.find(" ry_aweme_status = 0");
         all.parallelStream().forEach(user -> {
             try {
                 List<Aweme> awemeList = new AwemeAction(user)

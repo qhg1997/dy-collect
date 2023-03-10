@@ -1,4 +1,4 @@
-package com.qhg.dy;
+package com.qhg;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
