@@ -51,7 +51,7 @@ class InfoTest {
             Path<Long> id = root.get("id");
             return criteriaBuilder.gt(id, 7061);
         });
-        doWork(all);
+        doWork(all.stream().filter(xiaoqu -> !xiaoquInfoRepository.existsById(xiaoqu.getId())).collect(Collectors.toList()));
     }
 
     //    public static void main(String[] args) throws IOException {
@@ -116,14 +116,18 @@ class InfoTest {
     }
 
     private static String getImageUrl(String link) {
-        URL url = URLUtil.url(link);
-        String path = URLUtil.getPath(link);
-        String host = URLUtil.getHost(url).getHost();
-        int indexOf = path.lastIndexOf(".");
-        String substring = path.substring(0, indexOf);
-        int lastIndexOf = substring.lastIndexOf(".");
-        substring = substring.substring(0, lastIndexOf);
-        return "https://" + host + substring;
+        try {
+            URL url = URLUtil.url(link);
+            String path = URLUtil.getPath(link);
+            String host = URLUtil.getHost(url).getHost();
+            int indexOf = path.lastIndexOf(".");
+            String substring = path.substring(0, indexOf);
+            int lastIndexOf = substring.lastIndexOf(".");
+            substring = substring.substring(0, lastIndexOf);
+            return "https://" + host + substring;
+        } catch (Exception e) {
+            return link;
+        }
     }
 
     private void doWork(List<Xiaoqu> all) throws IOException {
@@ -174,59 +178,57 @@ class InfoTest {
             String name = pageData.getString("name");
             bigInfo.put("jsoup", xiaoquDetail);
             //途径2 api爬取
-            JSONObject bean = OkHttps.async("https://wxapp.api.ke.com/openapi/ershouc/xcx/xiaoqu/detail/part0")
-                    .addUrlPara("id", xqid)
-                    .addUrlPara("sign", "")
-                    .addHeader("Authorization", Shell.getAuthorization("{url}?id=" + xqid + "&sign="))
-                    .addHeader("Time-Stamp", System.currentTimeMillis() + "")
-                    .addHeader("user-agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 MicroMessenger/7.0.4.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat/WMPF")
-                    .addHeader("Lianjia-Source", "ljwxapp")
-                    .get().getResult().getBody().cache().toBean(JSONObject.class);
+//            JSONObject bean = OkHttps.async("https://wxapp.api.ke.com/openapi/ershouc/xcx/xiaoqu/detail/part0")
+//                    .addUrlPara("id", xqid)
+//                    .addUrlPara("sign", "")
+//                    .addHeader("Authorization", Shell.getAuthorization("{url}?id=" + xqid + "&sign="))
+//                    .addHeader("Time-Stamp", System.currentTimeMillis() + "")
+//                    .addHeader("user-agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 MicroMessenger/7.0.4.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat/WMPF")
+//                    .addHeader("Lianjia-Source", "ljwxapp")
+//                    .get().getResult().getBody().cache().toBean(JSONObject.class);
 
-            if (bean.containsKey("data") && bean.getInteger("errno") == 0) {
-                JSONObject data = bean.getJSONObject("data");
-                JSONArray pictureList = data.getJSONObject("headerInfos").getJSONArray("pictureList");
-                JSONArray list = data.getJSONArray("list");
-                JSONObject jsonObject = pictureList.getJSONObject(0);
-                JSONObject object1 = new JSONObject();
-                object1.put("pictureList", pictureList);
-                if (jsonObject.getInteger("groupId") == 1) {
-                    JSONArray imgUrlList = jsonObject.getJSONArray("imgUrlList");
-                    for (int i = 0; i < imgUrlList.size(); i++) {
-                        JSONObject imgUrlListJSONObject = imgUrlList.getJSONObject(i);
-                        String url = imgUrlListJSONObject.getString("url");
-                        urls.add(getImageUrl(url));
-                    }
-                }
-
-                for (int i = 0; i < list.size(); i++) {
-                    JSONObject listJSONObject = list.getJSONObject(i);
-                    String navKey = listJSONObject.getString("navKey");
-                    if ("introduceInfo".equals(navKey)) {
-                        JSONArray cardList = listJSONObject.getJSONArray("cardList");
-                        for (int i1 = 0; i1 < cardList.size(); i1++) {
-                            JSONObject cardListJSONObject = cardList.getJSONObject(i1);
-                            String cardPoolType = cardListJSONObject.getString("cardPoolType");
-                            if ("introduceDetailCard".equals(cardPoolType)) {
-                                JSONObject info1 = cardListJSONObject.getJSONObject("info");
-                                JSONArray detailInfo = info1.getJSONArray("detailInfo");
-                                object1.put("detailInfo", detailInfo);
-                                for (int i2 = 0; i2 < detailInfo.size(); i2++) {
-                                    JSONObject detailInfoJSONObject = detailInfo.getJSONObject(i2);
-                                    JSONArray contents = detailInfoJSONObject.getJSONArray("contents");
-                                    for (int i3 = 0; i3 < contents.size(); i3++) {
-                                        JSONObject contentsJSONObject = contents.getJSONObject(i3);
-                                        String name1 = contentsJSONObject.getString("name");
-                                        String value = contentsJSONObject.getString("value");
-                                        attr.put(name1, value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                bigInfo.put("api", object1);
-            }
+//            if (bean.containsKey("data") && bean.getInteger("errno") == 0) {
+//                JSONObject data = bean.getJSONObject("data");
+//                JSONArray pictureList = data.getJSONObject("headerInfos").getJSONArray("pictureList");
+//                JSONArray list = data.getJSONArray("list");
+//                JSONObject jsonObject = pictureList.getJSONObject(0);
+//                JSONObject object1 = new JSONObject();
+//                object1.put("pictureList", pictureList);
+//                JSONArray imgUrlList = jsonObject.getJSONArray("imgUrlList");
+//                for (int i = 0; i < imgUrlList.size(); i++) {
+//                    JSONObject imgUrlListJSONObject = imgUrlList.getJSONObject(i);
+//                    String url = imgUrlListJSONObject.getString("url");
+//                    urls.add(getImageUrl(url));
+//                }
+//
+//                for (int i = 0; i < list.size(); i++) {
+//                    JSONObject listJSONObject = list.getJSONObject(i);
+//                    String navKey = listJSONObject.getString("navKey");
+//                    if ("introduceInfo".equals(navKey)) {
+//                        JSONArray cardList = listJSONObject.getJSONArray("cardList");
+//                        for (int i1 = 0; i1 < cardList.size(); i1++) {
+//                            JSONObject cardListJSONObject = cardList.getJSONObject(i1);
+//                            String cardPoolType = cardListJSONObject.getString("cardPoolType");
+//                            if ("introduceDetailCard".equals(cardPoolType)) {
+//                                JSONObject info1 = cardListJSONObject.getJSONObject("info");
+//                                JSONArray detailInfo = info1.getJSONArray("detailInfo");
+//                                object1.put("detailInfo", detailInfo);
+//                                for (int i2 = 0; i2 < detailInfo.size(); i2++) {
+//                                    JSONObject detailInfoJSONObject = detailInfo.getJSONObject(i2);
+//                                    JSONArray contents = detailInfoJSONObject.getJSONArray("contents");
+//                                    for (int i3 = 0; i3 < contents.size(); i3++) {
+//                                        JSONObject contentsJSONObject = contents.getJSONObject(i3);
+//                                        String name1 = contentsJSONObject.getString("name");
+//                                        String value = contentsJSONObject.getString("value");
+//                                        attr.put(name1, value);
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//                bigInfo.put("api", object1);
+//            }
 
 
             info.put("attr", attr);
@@ -243,7 +245,7 @@ class InfoTest {
             xiaoquBigInfo.setBigInfo(bigInfo.toJSONString());
             xiaoquInfoRepository.save(xiaoquInfo);
             xiaoquBigInfoRepository.save(xiaoquBigInfo);
-            System.out.println("保存成功: " + name);
+            System.out.println("保存成功: " + xiaoqu.getId() + " - " + name);
         }
     }
 
@@ -253,7 +255,7 @@ class InfoTest {
             Path<Long> id = root.get("id");
             return criteriaBuilder.lt(id, 7061);
         });
-        doWork(all);
+        doWork(all.stream().filter(i -> !xiaoquInfoRepository.existsById(i.getId())).collect(Collectors.toList()));
     }
 
 }

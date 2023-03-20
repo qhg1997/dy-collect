@@ -10,4 +10,5 @@ public interface XiaoquInfoRepository extends JpaRepository<XiaoquInfo, Long> {
     <S extends XiaoquInfo> S save(S entity);
 
     <S extends XiaoquInfo> List<S> saveAll(Iterable<S> entities);
+
 }

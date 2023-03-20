@@ -19,8 +19,6 @@ public class Downloader {
     public static File baseFolder = new File("D:\\好用的软件\\HTTP Debugger Pro  注册机\\dyDowned");
     Integer mode = 1;
 
-    public ArrayBlockingQueue<AwemeResource> arrayBlockingQueue = new ArrayBlockingQueue<>(50000);
-
     static {
         if (!baseFolder.exists()) {
             boolean mkdirs = baseFolder.mkdirs();
@@ -61,7 +59,7 @@ public class Downloader {
     }
 
     public void download() throws InterruptedException {
-        resource.parallelStream().forEach(awemeResource -> {
+        resource.forEach(awemeResource -> {
             File file;
             if (awemeResource.getType() == 1) {
                 if (mode == 0)

@@ -1,5 +1,6 @@
 package com.qhg.bk.model;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 
 import javax.persistence.*;
