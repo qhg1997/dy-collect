@@ -3,11 +3,7 @@ package com.qhg.sgp;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ejlchina.okhttps.HTTP;
-import com.ejlchina.okhttps.OkHttps;
 import com.ejlchina.okhttps.fastjson.FastjsonMsgConvertor;
-import com.qhg.dy.mapper.SubUserMapper;
-import com.qhg.dy.mapper.SubjectMapper;
-import com.qhg.dy.mapper.WeightDataMapper;
 import com.qhg.sgp.model.Columnist;
 import com.qhg.sgp.model.Pai;
 import com.qhg.sgp.model.Tag;
@@ -47,6 +43,8 @@ class PaiTests {
     void fastCollect() {
         Integer type = 2;//1视频 2专栏
         Integer page = 1;
+        int consecutiveNumbers = 0;
+        int maxConsecutiveNumbers = 5;
         while (true) {
             JSONObject body = http.async("https://api.cbbee0.com/v1_2/homePage")
                     .addBodyPara("device_id", "")
@@ -91,11 +89,16 @@ class PaiTests {
                     }
                 }
                 for (Pai pai : pais) {
-                    if (paiRepository.findPaiByLibraryIdAndType(pai.getLibraryId(), pai.getType()) == null) {
+                    Pai libraryIdAndType = paiRepository.findPaiByLibraryIdAndType(pai.getLibraryId(), pai.getType());
+                    if (libraryIdAndType == null) {
+                        consecutiveNumbers -= consecutiveNumbers;
                         paiRepository.save(pai);
+                    } else {
+                        consecutiveNumbers++;
                     }
                 }
-                if (data.getInteger("hasNextPage") != 1) {
+
+                if (data.getInteger("hasNextPage") != 1 || consecutiveNumbers > maxConsecutiveNumbers) {
                     break;
                 }
                 page++;

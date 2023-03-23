@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 @Data
 public class Downloader {
 
-    public static File baseFolder = new File("D:\\好用的软件\\HTTP Debugger Pro  注册机\\dyDowned");
+    public static File baseFolder = new File("D:\\好用的软件\\HTTP Debugger Pro  注册机\\dyDowned2");
     Integer mode = 1;
 
     static {
