@@ -43,17 +43,61 @@ class ExportTest {
 
     @Test
     void t1() throws IOException {
-        List<Xiaoqu> all = xiaoquRepository.findAll((Specification<Xiaoqu>) (root, query, criteriaBuilder) -> {
-            Path<Long> id = root.get("id");
-            return criteriaBuilder.gt(id, 7061);
-        });
-        for (Xiaoqu xiaoqu : all) {
-            Optional<XiaoquInfo> byId = xiaoquInfoRepository.findById(xiaoqu.getId());
-            if (byId.isPresent()) {
-                XiaoquInfo xiaoquInfo = byId.get();
-                RealEstate realEstate = xiaoquInfo.toRe(xiaoqu);
-                realEstateRepository.save(realEstate);
+        List<XiaoquInfo> all = xiaoquInfoRepository.findAll().stream().filter(u -> u.getStatus() == 1).collect(Collectors.toList());
+        for (XiaoquInfo xiaoquInfo : all) {
+            RealEstate realEstate = xiaoquInfo.toRe();
+            realEstateRepository.save(realEstate);
+        }
+    }
+
+    @Test
+    void t5() throws IOException {
+        String k = "c3642d67c64502b885c33c52ea7bc235";
+        List<RealEstate> all = realEstateRepository.findAll().stream().filter(u -> u.getAmapPosition() == null).collect(Collectors.toList());
+        for (RealEstate estate : all) {
+            JSONObject bean = OkHttps.async("https://restapi.amap.com/v3/assistant/coordinate/convert")
+                    .addUrlPara("coordsys", "baidu")
+                    .addUrlPara("key", k)
+                    .addUrlPara("locations", estate.getBaiduPosition())
+                    .get().getResult().getBody().toBean(JSONObject.class);
+            System.out.println(bean);
+            if (bean.getString("status").equals("1")) {
+                String locations = bean.getString("locations");
+                estate.setAmapPosition(locations);
+                estate.setPosition(locations);
+                realEstateRepository.save(estate);
+            } else {
+                k = "0888daa686ee6fa32bbda70ceb161a9e";
+                bean = OkHttps.async("https://restapi.amap.com/v3/assistant/coordinate/convert")
+                        .addUrlPara("coordsys", "baidu")
+                        .addUrlPara("key", k)
+                        .addUrlPara("locations", estate.getBaiduPosition())
+                        .get().getResult().getBody().toBean(JSONObject.class);
+                System.out.println(bean);
+                if (bean.getString("status").equals("1")) {
+                    String locations = bean.getString("locations");
+                    estate.setAmapPosition(locations);
+                    estate.setPosition(locations);
+                    realEstateRepository.save(estate);
+                }
             }
+        }
+
+    }
+
+    @Test
+    void t3() throws IOException {
+        List<XiaoquInfo> all = xiaoquInfoRepository.findAll().stream().filter(u -> u.getRegion() == null).collect(Collectors.toList());
+        for (XiaoquInfo xiaoquInfo : all) {
+            if (xiaoquInfo.getInfo() == null) {
+                continue;
+            }
+            List<Xiaoqu> byXqid = xiaoquRepository.findByXqid(xiaoquInfo.getXqId());
+            List<String> collect = byXqid.stream().map(Xiaoqu::getRegion).distinct().collect(Collectors.toList());
+            if (collect.size() == 1) {
+                xiaoquInfo.setRegion(collect.get(0));
+            }
+            xiaoquInfoRepository.save(xiaoquInfo);
         }
     }
 

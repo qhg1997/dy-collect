@@ -41,8 +41,8 @@ class PaiTests {
 
     @Test
     void fastCollect() {
-        Integer type = 2;//1视频 2专栏
-        Integer page = 1;
+        Integer type = 1;//1视频 2专栏
+        Integer page = 2;
         int consecutiveNumbers = 0;
         int maxConsecutiveNumbers = 5;
         while (true) {

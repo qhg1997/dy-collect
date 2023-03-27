@@ -47,11 +47,8 @@ class InfoTest {
 
     @Test
     void t1() throws IOException {
-        List<Xiaoqu> all = xiaoquRepository.findAll((Specification<Xiaoqu>) (root, query, criteriaBuilder) -> {
-            Path<Long> id = root.get("id");
-            return criteriaBuilder.gt(id, 7061);
-        });
-        doWork(all.stream().filter(xiaoqu -> !xiaoquInfoRepository.existsById(xiaoqu.getId())).collect(Collectors.toList()));
+        List<XiaoquInfo> all = xiaoquInfoRepository.findAll();
+        doWork(all.stream().filter(i -> i.getStatus() == 5).collect(Collectors.toList()));
     }
 
     //    public static void main(String[] args) throws IOException {
@@ -130,132 +127,129 @@ class InfoTest {
         }
     }
 
-    private void doWork(List<Xiaoqu> all) throws IOException {
-        for (Xiaoqu xiaoqu : all) {
-            String xqid = xiaoqu.getXqid();
-            JSONObject attr = new JSONObject();
-            JSONObject bigInfo = new JSONObject();
-            JSONObject info = new JSONObject();
-            List<String> urls = new ArrayList<>();
+    private void doWork(List<XiaoquInfo> all) throws IOException {
+        for (XiaoquInfo xiaoqu : all) {
+            if (xiaoqu.getInfo() != null) {
+                continue;
+            }
+            try {
+                String xqid = xiaoqu.getXqId();
+                JSONObject attr = new JSONObject();
+                JSONObject bigInfo = new JSONObject();
+                JSONObject info = new JSONObject();
+                List<String> urls = new ArrayList<>();
 
-            //途径1 h5爬取
-            Document document = Jsoup.connect("https://m.ke.com/xa/xiaoqu/" + xqid).get();
-            Elements select = document.select("script[charset=utf-8]");
-            Element last = select.last();
-            String trim = last.data().replace("window.__PRELOADED_STATE__ = ", "").trim();
-            JSONObject object = JSON.parseObject(trim.substring(0, trim.length() - 1));
-            JSONObject xiaoquDetail = object.getJSONObject("xiaoquDetail");
-            JSONObject positionObj = xiaoquDetail.getJSONObject("position");
-            Object survey = xiaoquDetail.get("survey");
+                //途径1 h5爬取
+                Document document = Jsoup.connect("https://m.ke.com/xa/xiaoqu/" + xqid).get();
+                Elements select = document.select("script[charset=utf-8]");
+                Element last = select.last();
+                String trim = last.data().replace("window.__PRELOADED_STATE__ = ", "").trim();
+                JSONObject object = JSON.parseObject(trim.substring(0, trim.length() - 1));
+                JSONObject xiaoquDetail = object.getJSONObject("xiaoquDetail");
+                JSONObject positionObj = xiaoquDetail.getJSONObject("position");
+                Object survey = xiaoquDetail.get("survey");
 
-            if (survey instanceof JSONArray) {
-                JSONArray surveys = (JSONArray) survey;
-                for (int i = 0; i < surveys.size(); i++) {
-                    String name = surveys.getJSONObject(i).getString("name");
-                    String value = surveys.getJSONObject(i).getString("value");
-                    attr.put(name, value);
+                if (survey instanceof JSONArray) {
+                    JSONArray surveys = (JSONArray) survey;
+                    for (int i = 0; i < surveys.size(); i++) {
+                        String name = surveys.getJSONObject(i).getString("name");
+                        String value = surveys.getJSONObject(i).getString("value");
+                        attr.put(name, value);
+                    }
+                } else if (survey instanceof JSONObject) {
+                    Collection<Object> values = ((JSONObject) survey).values();
+                    for (Object o : values) {
+                        JSONObject surveyobj = (JSONObject) o;
+                        String name = surveyobj.getString("name");
+                        String value = surveyobj.getString("value");
+                        attr.put(name, value);
+                    }
                 }
-            } else if (survey instanceof JSONObject) {
-                Collection<Object> values = ((JSONObject) survey).values();
-                for (Object o : values) {
-                    JSONObject surveyobj = (JSONObject) o;
-                    String name = surveyobj.getString("name");
-                    String value = surveyobj.getString("value");
-                    attr.put(name, value);
+
+
+                String pointLat = positionObj.getString("pointLat");
+                String pointLng = positionObj.getString("pointLng");
+                JSONObject pageData = xiaoquDetail.getJSONObject("pageData");
+                JSONArray images = pageData.getJSONArray("images");
+                for (int i = 0; i < images.size(); i++) {
+                    String imageUrl = images.getJSONObject(i).getString("imageUrl");
+                    urls.add(getImageUrl(imageUrl));
                 }
+                String address = pageData.getString("address");
+                String name = pageData.getString("name");
+                bigInfo.put("jsoup", xiaoquDetail);
+                //途径2 api爬取
+                JSONObject bean = OkHttps.async("https://wxapp.api.ke.com/openapi/ershouc/xcx/xiaoqu/detail/part0")
+                        .addUrlPara("id", xqid)
+                        .addUrlPara("sign", "")
+                        .addHeader("Authorization", Shell.getAuthorization("{url}?id=" + xqid + "&sign="))
+                        .addHeader("Time-Stamp", System.currentTimeMillis() + "")
+                        .addHeader("user-agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 MicroMessenger/7.0.4.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat/WMPF")
+                        .addHeader("Lianjia-Source", "ljwxapp")
+                        .get().getResult().getBody().cache().toBean(JSONObject.class);
+
+                if (bean.containsKey("data") && bean.getInteger("errno") == 0) {
+                    JSONObject data = bean.getJSONObject("data");
+                    JSONArray pictureList = data.getJSONObject("headerInfos").getJSONArray("pictureList");
+                    JSONArray list = data.getJSONArray("list");
+                    JSONObject jsonObject = pictureList.getJSONObject(0);
+                    JSONObject object1 = new JSONObject();
+                    object1.put("pictureList", pictureList);
+                    JSONArray imgUrlList = jsonObject.getJSONArray("imgUrlList");
+                    for (int i = 0; i < imgUrlList.size(); i++) {
+                        JSONObject imgUrlListJSONObject = imgUrlList.getJSONObject(i);
+                        String url = imgUrlListJSONObject.getString("url");
+                        urls.add(getImageUrl(url));
+                    }
+
+                    for (int i = 0; i < list.size(); i++) {
+                        JSONObject listJSONObject = list.getJSONObject(i);
+                        String navKey = listJSONObject.getString("navKey");
+                        if ("introduceInfo".equals(navKey)) {
+                            JSONArray cardList = listJSONObject.getJSONArray("cardList");
+                            for (int i1 = 0; i1 < cardList.size(); i1++) {
+                                JSONObject cardListJSONObject = cardList.getJSONObject(i1);
+                                String cardPoolType = cardListJSONObject.getString("cardPoolType");
+                                if ("introduceDetailCard".equals(cardPoolType)) {
+                                    JSONObject info1 = cardListJSONObject.getJSONObject("info");
+                                    JSONArray detailInfo = info1.getJSONArray("detailInfo");
+                                    object1.put("detailInfo", detailInfo);
+                                    for (int i2 = 0; i2 < detailInfo.size(); i2++) {
+                                        JSONObject detailInfoJSONObject = detailInfo.getJSONObject(i2);
+                                        JSONArray contents = detailInfoJSONObject.getJSONArray("contents");
+                                        for (int i3 = 0; i3 < contents.size(); i3++) {
+                                            JSONObject contentsJSONObject = contents.getJSONObject(i3);
+                                            String name1 = contentsJSONObject.getString("name");
+                                            String value = contentsJSONObject.getString("value");
+                                            attr.put(name1, value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    bigInfo.put("api", object1);
+                }
+
+
+                info.put("attr", attr);
+                info.put("pointLat", pointLat);
+                info.put("pointLng", pointLng);
+                info.put("address", address);
+                info.put("name", name);
+                info.put("images", urls);
+                xiaoqu.setInfo(info.toJSONString());
+                XiaoquBigInfo xiaoquBigInfo = new XiaoquBigInfo();
+                xiaoquBigInfo.setId(xiaoqu.getId());
+                xiaoquBigInfo.setBigInfo(bigInfo.toJSONString());
+                xiaoquInfoRepository.save(xiaoqu);
+                xiaoquBigInfoRepository.save(xiaoquBigInfo);
+                System.out.println("保存成功: " + xiaoqu.getId() + " - " + name);
+            } catch (Exception e) {
+
             }
 
-
-            String pointLat = positionObj.getString("pointLat");
-            String pointLng = positionObj.getString("pointLng");
-            JSONObject pageData = xiaoquDetail.getJSONObject("pageData");
-            JSONArray images = pageData.getJSONArray("images");
-            for (int i = 0; i < images.size(); i++) {
-                String imageUrl = images.getJSONObject(i).getString("imageUrl");
-                urls.add(getImageUrl(imageUrl));
-            }
-            String address = pageData.getString("address");
-            String name = pageData.getString("name");
-            bigInfo.put("jsoup", xiaoquDetail);
-            //途径2 api爬取
-//            JSONObject bean = OkHttps.async("https://wxapp.api.ke.com/openapi/ershouc/xcx/xiaoqu/detail/part0")
-//                    .addUrlPara("id", xqid)
-//                    .addUrlPara("sign", "")
-//                    .addHeader("Authorization", Shell.getAuthorization("{url}?id=" + xqid + "&sign="))
-//                    .addHeader("Time-Stamp", System.currentTimeMillis() + "")
-//                    .addHeader("user-agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36 MicroMessenger/7.0.4.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat/WMPF")
-//                    .addHeader("Lianjia-Source", "ljwxapp")
-//                    .get().getResult().getBody().cache().toBean(JSONObject.class);
-
-//            if (bean.containsKey("data") && bean.getInteger("errno") == 0) {
-//                JSONObject data = bean.getJSONObject("data");
-//                JSONArray pictureList = data.getJSONObject("headerInfos").getJSONArray("pictureList");
-//                JSONArray list = data.getJSONArray("list");
-//                JSONObject jsonObject = pictureList.getJSONObject(0);
-//                JSONObject object1 = new JSONObject();
-//                object1.put("pictureList", pictureList);
-//                JSONArray imgUrlList = jsonObject.getJSONArray("imgUrlList");
-//                for (int i = 0; i < imgUrlList.size(); i++) {
-//                    JSONObject imgUrlListJSONObject = imgUrlList.getJSONObject(i);
-//                    String url = imgUrlListJSONObject.getString("url");
-//                    urls.add(getImageUrl(url));
-//                }
-//
-//                for (int i = 0; i < list.size(); i++) {
-//                    JSONObject listJSONObject = list.getJSONObject(i);
-//                    String navKey = listJSONObject.getString("navKey");
-//                    if ("introduceInfo".equals(navKey)) {
-//                        JSONArray cardList = listJSONObject.getJSONArray("cardList");
-//                        for (int i1 = 0; i1 < cardList.size(); i1++) {
-//                            JSONObject cardListJSONObject = cardList.getJSONObject(i1);
-//                            String cardPoolType = cardListJSONObject.getString("cardPoolType");
-//                            if ("introduceDetailCard".equals(cardPoolType)) {
-//                                JSONObject info1 = cardListJSONObject.getJSONObject("info");
-//                                JSONArray detailInfo = info1.getJSONArray("detailInfo");
-//                                object1.put("detailInfo", detailInfo);
-//                                for (int i2 = 0; i2 < detailInfo.size(); i2++) {
-//                                    JSONObject detailInfoJSONObject = detailInfo.getJSONObject(i2);
-//                                    JSONArray contents = detailInfoJSONObject.getJSONArray("contents");
-//                                    for (int i3 = 0; i3 < contents.size(); i3++) {
-//                                        JSONObject contentsJSONObject = contents.getJSONObject(i3);
-//                                        String name1 = contentsJSONObject.getString("name");
-//                                        String value = contentsJSONObject.getString("value");
-//                                        attr.put(name1, value);
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//                bigInfo.put("api", object1);
-//            }
-
-
-            info.put("attr", attr);
-            info.put("pointLat", pointLat);
-            info.put("pointLng", pointLng);
-            info.put("address", address);
-            info.put("name", name);
-            info.put("images", urls);
-            XiaoquInfo xiaoquInfo = new XiaoquInfo();
-            xiaoquInfo.setId(xiaoqu.getId());
-            xiaoquInfo.setInfo(info.toJSONString());
-            XiaoquBigInfo xiaoquBigInfo = new XiaoquBigInfo();
-            xiaoquBigInfo.setId(xiaoqu.getId());
-            xiaoquBigInfo.setBigInfo(bigInfo.toJSONString());
-            xiaoquInfoRepository.save(xiaoquInfo);
-            xiaoquBigInfoRepository.save(xiaoquBigInfo);
-            System.out.println("保存成功: " + xiaoqu.getId() + " - " + name);
         }
-    }
-
-    @Test
-    void t2() throws IOException {
-        List<Xiaoqu> all = xiaoquRepository.findAll((Specification<Xiaoqu>) (root, query, criteriaBuilder) -> {
-            Path<Long> id = root.get("id");
-            return criteriaBuilder.lt(id, 7061);
-        });
-        doWork(all.stream().filter(i -> !xiaoquInfoRepository.existsById(i.getId())).collect(Collectors.toList()));
     }
 
 }

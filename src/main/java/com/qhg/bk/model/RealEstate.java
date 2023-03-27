@@ -107,7 +107,7 @@ public class RealEstate {
     /**
      * 装修标准  1毛胚 2精装
      */
-    private String adorn_standard = "-";
+    private String adorn_standard;
     /**
      * 开盘时间
      */
@@ -144,6 +144,83 @@ public class RealEstate {
      * 规划车位
      */
     private String parking_space;
+    /**
+     * amapPosition
+     */
+    private String amapPosition;
+    /**
+     * baidu_position
+     */
+    private String baiduPosition;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+
+    public void setPosition(String position) {
+        this.position = position;
+    }
+
+    public void setDeveloper(String developer) {
+        this.developer = "-".equals(developer) ? null : developer;
+    }
+
+    public void set_usage(String _usage) {
+        this._usage = "-".equals(_usage) ? null : _usage;
+    }
+
+
+    public void setBuild_type(String build_type) {
+        this.build_type = "-".equals(build_type) ? null : build_type;
+    }
+
+
+    public void setRoof(String roof) {
+        this.roof = "-".equals(roof) ? null : roof;
+    }
+
+    public void setDoor(String door) {
+        this.door = "-".equals(door) ? null : door;
+    }
+
+    public void setGreen_rate(String green_rate) {
+        this.green_rate = "-".equals(green_rate) ? null : green_rate;
+    }
+
+    public void setVolume_rate(String volume_rate) {
+        this.volume_rate = "-".equals(volume_rate) ? null : volume_rate;
+    }
+
+    public void setParking_space(String parking_space) {
+        this.parking_space = "-".equals(parking_space) ? null : parking_space;
+    }
+
+    public void setManage_company(String manage_company) {
+        this.manage_company = "-".equals(manage_company) ? null : manage_company;
+    }
+
+    public void setManage_fee(String manage_fee) {
+        this.manage_fee = "-".equals(manage_fee) ? null : manage_fee;
+    }
+
+    public void setWater(String water) {
+        this.water = "-".equals(water) ? null : water;
+    }
+
+    public void setElectric(String electric) {
+        this.electric = "-".equals(electric) ? null : electric;
+    }
+
+    public void setHeat(String heat) {
+        this.heat = "-".equals(heat) ? null : heat;
+    }
+
+
     /**
      * 物业公司
      */

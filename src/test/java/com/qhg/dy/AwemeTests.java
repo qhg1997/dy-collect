@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
@@ -183,6 +184,15 @@ class AwemeTests {
                         }
                         return i;
                     });
+        }
+    }
+
+    public static void main(String[] args) {
+        File file = new File("I:\\Resources\\OldResources\\合集类\\手机合集类2023.03.23\\合集类");
+        File file2 = new File("I:\\Resources\\OldResources\\合集类\\手机合集类2023.03.23\\合集类2");
+        File[] files = file.listFiles();
+        for (File file1 : files) {
+            new File(file2,file1.getName()).mkdirs();
         }
     }
 

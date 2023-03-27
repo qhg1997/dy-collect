@@ -11,4 +11,5 @@ public interface XiaoquInfoRepository extends JpaRepository<XiaoquInfo, Long> {
 
     <S extends XiaoquInfo> List<S> saveAll(Iterable<S> entities);
 
+    boolean existsByXqId(String xqId);
 }

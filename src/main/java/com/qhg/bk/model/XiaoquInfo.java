@@ -13,8 +13,14 @@ public class XiaoquInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String info;
+    private String name;
+    private String address;
+    private String position;
+    private String region;
+    private Integer status;
+    private String xqId;
 
-    public RealEstate toRe(Xiaoqu xiaoqu) {
+    public RealEstate toRe() {
         JSONObject jsonObject = new JSONObject() {{
             put("临潼", 1111);
             put("周至", 1615);
@@ -32,14 +38,12 @@ public class XiaoquInfo {
             put("高陵", 1109);
         }};
         JSONObject object = JSONObject.parseObject(this.info);
-        System.out.println(object);
         RealEstate realEstate = new RealEstate();
-        realEstate.setName(xiaoqu.getName());
-        realEstate.setAddress(object.getString("address"));
-        realEstate.setRegion_id(jsonObject.getInteger(xiaoqu.getRegion()));
-        realEstate.setAd_region_id(jsonObject.getInteger(xiaoqu.getRegion()));
-
-        realEstate.setPosition(object.getString("pointLng") + "," + object.getString("pointLat"));
+        realEstate.setName(this.getName());
+        realEstate.setAddress(this.getAddress());
+        realEstate.setRegion_id(jsonObject.getInteger(this.getRegion()));
+        realEstate.setAd_region_id(jsonObject.getInteger(this.getRegion()));
+        realEstate.setPosition(this.getPosition());
         object = object.getJSONObject("attr");
         realEstate.setDeveloper(object.getString("开发企业"));
         realEstate.set_usage(object.getString("房屋用途"));
@@ -54,8 +58,6 @@ public class XiaoquInfo {
         realEstate.setWater(object.getString("用水类型"));
         realEstate.setElectric(object.getString("用电类型"));
         realEstate.setHeat(object.getString("供暖类型"));
-        String real_files = "";
-        realEstate.setReal_files(real_files);
         return realEstate;
     }
 }
