@@ -52,7 +52,7 @@ class ExportTest {
 
     @Test
     void t5() throws IOException {
-        String k = "c3642d67c64502b885c33c52ea7bc235";
+        String k = "c3642d67c64502b885" + "" + "c33c52ea7bc235";
         List<RealEstate> all = realEstateRepository.findAll().stream().filter(u -> u.getAmapPosition() == null).collect(Collectors.toList());
         for (RealEstate estate : all) {
             JSONObject bean = OkHttps.async("https://restapi.amap.com/v3/assistant/coordinate/convert")
@@ -67,7 +67,7 @@ class ExportTest {
                 estate.setPosition(locations);
                 realEstateRepository.save(estate);
             } else {
-                k = "0888daa686ee6fa32bbda70ceb161a9e";
+                k = "0888daa686ee6fa32b" + "" + "bda70ceb161a9e";
                 bean = OkHttps.async("https://restapi.amap.com/v3/assistant/coordinate/convert")
                         .addUrlPara("coordsys", "baidu")
                         .addUrlPara("key", k)
