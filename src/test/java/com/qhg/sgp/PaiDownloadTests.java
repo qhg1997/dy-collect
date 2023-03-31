@@ -1,21 +1,38 @@
 package com.qhg.sgp;
 
+import cn.hutool.crypto.symmetric.AES;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ejlchina.okhttps.HTTP;
 import com.ejlchina.okhttps.fastjson.FastjsonMsgConvertor;
+import com.qhg.dy.utils.IInterceptor;
 import com.qhg.dy.utils.IO;
 import com.qhg.sgp.model.*;
 import com.qhg.sgp.repo.*;
+import org.apache.commons.io.FileUtils;
+import org.hibernate.query.criteria.internal.ParameterRegistry;
+import org.hibernate.query.criteria.internal.compile.RenderingContext;
+import org.hibernate.query.criteria.internal.expression.ExpressionImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.jpa.domain.Specification;
 
 import javax.annotation.Resource;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.Path;
+import javax.persistence.criteria.Predicate;
 import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.security.Security;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,117 +60,200 @@ class PaiDownloadTests {
     @Resource
     ColumnistRepository columnistRepository;
     static HTTP http = HTTP.builder()
-            .config(b -> b.connectTimeout(1, TimeUnit.MINUTES)
-                    .readTimeout(1, TimeUnit.MINUTES)
-                    .writeTimeout(1, TimeUnit.MINUTES)
-
+            .config(b -> b.connectTimeout(5, TimeUnit.MINUTES)
+                            .readTimeout(5, TimeUnit.MINUTES)
+                            .writeTimeout(5, TimeUnit.MINUTES)
+                            .addInterceptor(new IInterceptor())
+//                    .proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 7890)))
             ).addMsgConvertor(new FastjsonMsgConvertor())
             .build();
 
-    final String destDir = "";
+    final String tempDirPath = "D:\\sgp\\解说视频TWO";
 
     @Test
-    void fastCollect() {
-        File dir = new File(destDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
+    void fastDownload() throws InterruptedException {
+        File tempDir = new File(tempDirPath);
+        if (!tempDir.exists()) {
+            tempDir.mkdirs();
         }
-        List<Pai> all = paiRepository.findAll((Specification<Pai>) (root, query, criteriaBuilder) -> {
-            Path<Integer> type = root.get("type");
-            return criteriaBuilder.equal(type, 1);
+        List<PaiLibDetail> all = paiLibDetailRepository.findAll((Specification<PaiLibDetail>) (root, query, criteriaBuilder) -> {
+            Path<Integer> downed = root.get("downed");
+            return criteriaBuilder.isNull(downed);
         });
-
-        for (Pai pai : all) {
+        for (PaiLibDetail pai : all) {
+            CountDownLatch latch = new CountDownLatch(2);
+            Integer libraryId = pai.getLibraryId();
+            String url = pai.getUrl();
+            File tempDirPath = new File(tempDir, "" + libraryId);
+            File file = new File(tempDirPath, libraryId + ".mp4");
+            boolean m3U8 = downloadM3U8(url, tempDirPath, file, latch);
+            if (m3U8) {
+                pai.setDowned(1);
+                pai.setFilePath(file.getAbsolutePath());
+                paiLibDetailRepository.save(pai);
+            }
+            latch.countDown();
+            latch.await();
         }
     }
 
+    @Test
+    void fastDownload0() throws InterruptedException {
+        File tempDir = new File(tempDirPath);
+        if (!tempDir.exists()) {
+            tempDir.mkdirs();
+        }
+        List<PaiLibDetail> all = paiLibDetailRepository.findAll((Specification<PaiLibDetail>) (root, query, criteriaBuilder) -> {
+            Path<Integer> downed = root.get("downed");
+            return criteriaBuilder.equal(downed, -2);
+        });
+        for (PaiLibDetail pai : all) {
+            CountDownLatch latch = new CountDownLatch(2);
+
+            Integer libraryId = pai.getLibraryId();
+            String url = pai.getUrl();
+            File tempDirPath = new File(tempDir, "" + libraryId);
+            File file = new File(tempDirPath, libraryId + ".mp4");
+            boolean m3U8 = downloadM3U8(url, tempDirPath, file, latch);
+            if (m3U8) {
+                pai.setDowned(1);
+                pai.setFilePath(file.getAbsolutePath());
+                paiLibDetailRepository.save(pai);
+            }
+            latch.countDown();
+            latch.await();
+        }
+    }
+
+    private static byte[] decrypt(byte[] sSrc, String sKey) {
+        try {
+            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+            SecretKeySpec keySpec = new SecretKeySpec(sKey.getBytes(StandardCharsets.UTF_8), "AES");
+            //如果m3u8有IV标签，那么IvParameterSpec构造函数就把IV标签后的内容转成字节数组传进去
+            AlgorithmParameterSpec paramSpec = new IvParameterSpec(new byte[16]);
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, paramSpec);
+            return cipher.doFinal(sSrc);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    @Test
+    void fastDownload2() {
+        List<PaiLibDetail> all = paiLibDetailRepository.findAll((Specification<PaiLibDetail>) (root, query, criteriaBuilder) -> {
+            Path<Integer> downed = root.get("downed");
+            return criteriaBuilder.equal(downed, 1);
+        });
+        for (PaiLibDetail pai : all) {
+            if (!new File(pai.getFilePath()).exists()) {
+                pai.setDowned(-2);
+                pai.setFilePath("");
+                paiLibDetailRepository.save(pai);
+            }
+        }
+    }
+
+    boolean downloadM3U8(String url, File folder, File file, CountDownLatch latch) {
+        String keyStr = null;
+        try {
+            String uri = url.replace("index.m3u8", "");
+            List<String> strings = IO.readLines(http.async(url)
+                    .get().getResult().getBody().toByteStream());
+            System.out.println(strings);
+            List<String> collect = strings.stream().filter(l -> !l.startsWith("#")).collect(Collectors.toList());
+            if (strings.stream().anyMatch(i -> i.contains("key.key"))) {
+                keyStr = IO.readContentAsString(http.async(uri + "key.key")
+                        .get().getResult().getBody().toByteStream());
+            }
+            if (collect.size() == 1 && collect.get(0).contains(".m3u8")) {
+                String newUrl = uri + collect.get(0);
+                uri = newUrl.replace("index.m3u8", "");
+                strings = IO.readLines(http.async(newUrl)
+                        .get().getResult().getBody().toByteStream());
+                if (strings.stream().anyMatch(i -> i.contains("key.key"))) {
+                    keyStr = IO.readContentAsString(http.async(uri + "key.key")
+                            .get().getResult().getBody().toByteStream());
+                }
+                System.err.println(strings);
+                collect = strings.stream().filter(l -> !l.startsWith("#")).collect(Collectors.toList());
+            }
+
+            HashMap<String, String> map = new HashMap<>();
+            for (int i = 0; i < collect.size(); i++) {
+                map.put(collect.get(i), i + ".ts");
+            }
+            CountDownLatch countDownLatch = new CountDownLatch(collect.size());
+            String finalUri = uri;
+            int count = collect.size();
+            String finalKeyStr = keyStr;
+            collect.parallelStream()
+                    .forEach(key -> http.async(finalUri + key)
+                            .get()
+                            .getResult()
+                            .getBody()
+                            .toFile(new File(folder, map.get(key)))
+                            .setOnSuccess(f -> {
+                                System.out.println(file.getName() + " : " + f.getName() + " : 下载" + (f.isFile() && f.exists() ? "完成" : "失败") + " / 共" + count + "个视频" + ".   大小: " + f.length() / 1000 + "kb");
+                                if (finalKeyStr != null) {
+                                    System.out.println("解密中.....");
+                                    byte[] bytes = IO.readContent(f);
+                                    byte[] decrypt = decrypt(bytes, finalKeyStr);
+                                    System.out.println("解密完成.....");
+                                    IO.write(decrypt, f);
+                                }
+                                countDownLatch.countDown();
+                            }).start());
+            countDownLatch.await();
+            System.out.println("ts 片段下载完成,准备合并...");
+            mergeFile(folder, file);
+            System.out.println("ts 合并完成...");
+            for (File listFile : Objects.requireNonNull(folder.listFiles())) {
+                if ((listFile.getName().endsWith("ts") || listFile.getName().endsWith(".txt")) && listFile.isFile()) {
+                    FileUtils.deleteQuietly(listFile);
+                }
+            }
+            latch.countDown();
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
+    }
 
     public static void main(String[] args) {
-        File file = new File("C:\\Users\\qiaohuiguo\\Desktop\\pai001");
-
-//        String url = "https://kmi.522n.com/20230317/OWEwNjE4Mm/160528/1280/hls/decrypt/index.m3u8";
-//        String uri = url.replace("index.m3u8", "");
-//        List<String> strings = IO.readLines(http.async(url)
-//                .get().getResult().getBody().toByteStream());
-//        List<String> collect = strings.stream().filter(l -> !l.startsWith("#")).collect(Collectors.toList());
-//        collect.parallelStream().forEach(key -> http.async(uri + key)
-//                .get()
-//                .getResult()
-//                .getBody()
-//                .toFile(new File(file, key))
-//                .start());
-        boolean files = mergeFile2(file, new File(file, "result123.mp4"));
-        System.out.println(files);
+        File file = new File("D:\\sgp\\解说视频TWO\\148");
+        File file1 = new File("D:\\sgp\\解说视频TWO\\148\\148.mp4");
+        mergeFile(file, file1);
     }
 
-    public static boolean mergeFiles(File folder, File resultFile) {
-        if (folder == null)
-            return false;
-        final File[] files = folder.listFiles(i -> i.getName()
-                .endsWith("ts") && i.exists() && i.isFile());
-        if (files == null || files.length < 1)
-            return false;
-        if (files.length == 1)
-            return files[0].renameTo(resultFile);
-        final List<File> fileList = Arrays.stream(files)
-                .sorted(Comparator.comparing(file -> getNum(file.getName())))
+    public static void mergeFile(File folder, File resultFile) {
+        List<File> videoList = Arrays.stream(Objects.requireNonNull(folder.listFiles()))
+                .filter(i -> i.exists() && i.getName().endsWith("ts"))
+                .sorted(Comparator.comparingLong(filei -> getNum(filei.getName())))
                 .collect(Collectors.toList());
-        for (File file : fileList) {
-            System.out.println(file.getName());
-        }
-        for (File file : fileList)
-            if (file == null || !file.exists() || !file.isFile())
-                return false;
-        try {
-            int bufSize = 1024;
-            final FileOutputStream fileOutputStream = new FileOutputStream(resultFile);
-            BufferedOutputStream outputStream = new BufferedOutputStream(fileOutputStream);
-            byte[] buffer = new byte[bufSize];
-            for (File file : fileList) {
-                BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file));
-                int readcount;
-                while ((readcount = inputStream.read(buffer)) > 0) {
-                    outputStream.write(buffer, 0, readcount);
-                }
-                inputStream.close();
-            }
-            outputStream.flush();
-            outputStream.close();
-            fileOutputStream.flush();
-            fileOutputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-        for (File file : fileList) {
-            file.delete();
-        }
-        return true;
-    }
-
-    public static boolean mergeFile2(File folder, File resultFile) {
-        List<File> videoList = Arrays.stream(Objects.requireNonNull(folder.listFiles())).filter(i -> i.exists() && i.getName().endsWith("ts")).collect(Collectors.toList());
         //时间作为合并后的视频名
         //所有要合并的视频转换为ts格式存到videoList里
-        List<String> command1 = new ArrayList<>();
-        command1.add("C:\\Program_Files\\ffmpeg-6.0\\bin\\ffmpeg");
-        command1.add("-i");
-        StringBuilder buffer = new StringBuilder("\"concat:");
-        for (int i = 0; i < videoList.size(); i++) {
-            buffer.append(videoList.get(i));
-            if (i != videoList.size() - 1) {
-                buffer.append("|");
-            } else {
-                buffer.append("\"");
-            }
+        List<String> command = new ArrayList<>();
+        command.add("C:\\Program_Files\\ffmpeg-6.0\\bin\\ffmpeg");
+        File file = new File(folder, "fileList.txt");
+        StringJoiner joiner = new StringJoiner("\n");
+        for (File value : videoList) {
+            joiner.add("file '" + value + "'");
         }
-        command1.add(String.valueOf(buffer));
-        command1.add("-c");
-        command1.add("copy");
-        command1.add(resultFile.getAbsolutePath());
-        commandStart(command1);
-        return true;
+        IO.writeContent(joiner.toString(), file);
+        command.add("-f");
+        command.add("concat");
+        command.add("-safe");
+        command.add("0");
+        command.add("-i");
+        command.add(file.getAbsolutePath());
+        command.add("-c");
+        command.add("copy");
+        command.add(resultFile.getAbsolutePath());
+        commandStart(command);
     }
+
 
     /**
      * 调用命令行执行
@@ -167,7 +267,7 @@ class PaiDownloadTests {
         builder.command(command);
         //开始执行命令
         try {
-            System.out.println(IO.readContentAsString(builder.start().getInputStream()));
+            System.out.println(IO.readContentAsString(builder.start().getInputStream()).substring(0, 100));
         } catch (IOException e) {
             e.printStackTrace();
         }

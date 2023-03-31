@@ -88,7 +88,6 @@ class DowloaderTests {
             }
         }
     }
-
     @Test
         /*视频下载校验*/
     void test1() throws InterruptedException {
